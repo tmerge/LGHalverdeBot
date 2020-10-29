@@ -1,7 +1,8 @@
 import datetime
 import yaml
+import util
 
-from telegram import Update, ReplyKeyboardMarkup, Bot, ForceReply
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot, ForceReply
 from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler, Filters, ConversationHandler
 
 #load config
@@ -9,26 +10,37 @@ with open('config.yaml', 'r') as f:
     cfg = yaml.load(f, Loader=yaml.FullLoader)
 
 
-STRECKE, MELDER, CHOOSING = range(3)
+STRECKE, MELDER, CHOOSING, CONCLUSION = range(4)
 
 # handle all messages 
 def messageHandler(update, context): 
-    reply_markup = ReplyKeyboardMarkup([['Melder', 'Strecke']], resize_keyboard=True, one_time_keyboard=True)
+    reply_markup = ReplyKeyboardMarkup([['Melder 📟', 'Strecke🧯⏱', 'Abbrechen']], resize_keyboard=True, one_time_keyboard=True)
     update.message.reply_text(f'Hallo {update.effective_user.first_name}, wie kann ich dir helfen?', reply_markup=reply_markup)
     return CHOOSING
 
 # handle melder related stuff
 def melderHandler(update, context):
-    reply_markup = ReplyKeyboardMarkup([['Nicht ausgelöst', 'Defekt']], resize_keyboard=True, one_time_keyboard=True)
+    context.user_data['meldung'] = update.message.text
+    reply_markup = ReplyKeyboardMarkup([['Nicht ausgelöst', 'Defekt', 'Abbrechen']], resize_keyboard=True, one_time_keyboard=True)
     update.message.reply_text('Was genau möchtest du melden?', reply_markup = reply_markup)
-    return ConversationHandler.END
+    return MELDER
 
 def streckenHandler(update, context):
-    update.message.reply_text(f'Strecken Termine für {datetime.date.today().year + 1}:\n 11.02.2021 (Termin 1)\n 08.06.2021 (Termin 2)\n 24.08.2021 (Termin 3)')    
+    update.message.reply_text(f'Strecken Termine für {datetime.date.today().year + 1}:\n11.02.2021 (Termin 1)\n08.06.2021 (Termin 2)\n24.08.2021 (Termin 3)')    
     return ConversationHandler.END
 
-def abbrechen():
-    pass
+
+def melderDefektHandler(update, context):
+    update.message.reply_text(f'Dein Melder ist also defekt?')
+    return CONCLUSION
+
+def melderRequestHandler(update, context): 
+    update.message.reply_text(f'Wo lag der Melder?')
+    return CONCLUSION
+
+def abbrechen(update, context):
+    update.message.reply_text('Wenn ich dir mal wieder helfen soll, melde dich!', reply_markup=ReplyKeyboardRemove())
+    context.user_data.clear()
 
 # main part of bot
 def main():
@@ -41,8 +53,15 @@ def main():
     entry_points=[MessageHandler(Filters.regex(r'[a-zA-Z0-9]*'), messageHandler)],
     states={
         CHOOSING: [ 
-            MessageHandler(Filters.regex(r'[Melder]'), melderHandler),
-            MessageHandler(Filters.regex(r'[Strecke]'), streckenHandler)
+            MessageHandler(Filters.regex(r'^Melder$'), melderHandler),
+            MessageHandler(Filters.regex(r'^Strecke$'), streckenHandler),
+            MessageHandler(Filters.regex(r'^Abbrechen$'), abbrechen)
+        ],
+
+        MELDER: [
+            MessageHandler(Filters.regex(r'^Nicht ausgelöst'), melderRequestHandler),
+            MessageHandler(Filters.regex(r'^Defekt'), melderDefektHandler),
+            MessageHandler(Filters.regex(r'^Abbrechen$'), abbrechen)
         ]
     },
     fallbacks=[CommandHandler('abbrechen', abbrechen)])
