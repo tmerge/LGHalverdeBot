@@ -31,7 +31,8 @@ def streckenHandler(update, context):
 
 
 def melderDefektHandler(update, context):
-    update.message.reply_text(f'Dein Melder ist also defekt?')
+    reply_markup = ReplyKeyboardMarkup([['Ja', 'Nein', 'Abbrechen']], resize_keyboard=True, one_time_keyboard=True)
+    update.message.reply_text(f'Dein Melder ist also defekt?', reply_markup=reply_markup)
     return CONCLUSION
 
 def melderRequestHandler(update, context): 
@@ -53,8 +54,8 @@ def main():
     entry_points=[MessageHandler(Filters.regex(r'[a-zA-Z0-9]*'), messageHandler)],
     states={
         CHOOSING: [ 
-            MessageHandler(Filters.regex(r'^Melder$'), melderHandler),
-            MessageHandler(Filters.regex(r'^Strecke$'), streckenHandler),
+            MessageHandler(Filters.regex(r'^Melder'), melderHandler),
+            MessageHandler(Filters.regex(r'^Strecke'), streckenHandler),
             MessageHandler(Filters.regex(r'^Abbrechen$'), abbrechen)
         ],
 
